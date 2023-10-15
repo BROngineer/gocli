@@ -1,5 +1,9 @@
 package gocli
 
+import (
+	"fmt"
+)
+
 type Command struct {
 	Name        string
 	Subcommands map[string]Command
@@ -17,6 +21,10 @@ func NewCommand(name string) Command {
 
 func (c Command) Flags() map[string]Flag {
 	return c.FlagSet.Flags
+}
+
+func (c Command) Flag(name string) Flag {
+	return c.FlagSet.Flag(name)
 }
 
 func (c Command) WithSubcommand(cmd Command) Command {
@@ -38,21 +46,17 @@ func (c Command) WithRunEFunc(f func(Command) error) Command {
 }
 
 func (c Command) WithFlag(flag Flag) Command {
-	if c.Flags() == nil {
-		c.FlagSet = NewFlagSet()
-	}
 	c.FlagSet.AddFlag(flag)
 	return c
 }
 
-func (c Command) GetFlag(name string) Flag {
-	return c.Flags()[name]
-}
-
-func (c Command) Execute() {
-	c.Run(c)
-}
-
-func (c Command) ExecuteE() error {
-	return c.RunE(c)
+func (c Command) Execute() error {
+	if c.RunE != nil {
+		return c.RunE(c)
+	}
+	if c.Run != nil {
+		c.Run(c)
+		return nil
+	}
+	return fmt.Errorf("no function to execute")
 }

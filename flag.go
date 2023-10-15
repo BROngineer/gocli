@@ -4,36 +4,6 @@ import (
 	"strconv"
 )
 
-type Flag interface {
-	Name() string
-	Value() any
-	Parse(string) error
-	Shared() bool
-	SetShared()
-	Required() bool
-	SetRequired()
-}
-
-type FlagSet struct {
-	Flags map[string]Flag
-}
-
-func NewFlagSet() FlagSet {
-	return FlagSet{
-		Flags: make(map[string]Flag),
-	}
-}
-
-func (f *FlagSet) Merge(in *FlagSet) {
-	for _, v := range in.Flags {
-		f.AddFlag(v)
-	}
-}
-
-func (f *FlagSet) AddFlag(flag Flag) {
-	f.Flags[flag.Name()] = flag
-}
-
 type GenericFlag[T any] struct {
 	name         string
 	description  string
@@ -41,22 +11,19 @@ type GenericFlag[T any] struct {
 	value        *T
 	shared       bool
 	required     bool
+	parsed       bool
 }
 
-func NewFlag[T any](name, description string, defaultValue *T) *GenericFlag[T] {
+func NewFlag[T any](name, description string) *GenericFlag[T] {
 	return &GenericFlag[T]{
-		name:         name,
-		description:  description,
-		defaultValue: defaultValue}
-}
-
-func NewBooleanFlag[T any](name, description string) *GenericFlag[T] {
-	defaultValue := any(false).(T)
-	return &GenericFlag[T]{
-		name:         name,
-		description:  description,
-		defaultValue: &defaultValue,
+		name:        name,
+		description: description,
 	}
+}
+
+func (f *GenericFlag[T]) SetDefault(value T) *GenericFlag[T] {
+	f.defaultValue = &value
+	return f
 }
 
 func (f *GenericFlag[T]) Name() string {
@@ -83,7 +50,11 @@ func (f *GenericFlag[T]) Parse(in string) error {
 		v := any(d).(T)
 		f.value = &v
 	case *bool:
-		v := any(true).(T)
+		d, err := strconv.ParseBool(in)
+		if err != nil {
+			return err
+		}
+		v := any(d).(T)
 		f.value = &v
 	}
 	return nil
@@ -93,14 +64,24 @@ func (f *GenericFlag[T]) Shared() bool {
 	return f.shared
 }
 
-func (f *GenericFlag[T]) SetShared() {
+func (f *GenericFlag[T]) SetShared() Flag {
 	f.shared = true
+	return f
 }
 
 func (f *GenericFlag[T]) Required() bool {
 	return f.required
 }
 
-func (f *GenericFlag[T]) SetRequired() {
+func (f *GenericFlag[T]) SetRequired() Flag {
 	f.required = true
+	return f
+}
+
+func (f *GenericFlag[T]) Parsed() bool {
+	return f.parsed
+}
+
+func (f *GenericFlag[T]) SetParsed() {
+	f.parsed = true
 }

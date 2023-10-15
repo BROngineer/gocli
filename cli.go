@@ -2,23 +2,21 @@ package gocli
 
 import (
 	"fmt"
+	"os"
 	"strings"
 )
 
-func Run(cmd Command, args []string) error {
-	inheritFlags(&cmd)
-	command, err := evaluate(cmd, args)
+func Evaluate(rootCommand Command) (Command, error) {
+	args := os.Args
+	inheritFlags(&rootCommand)
+	command, err := evaluate(rootCommand, args)
 	if err != nil {
-		return err
+		return Command{}, err
 	}
-	if command.RunE != nil {
-		return command.ExecuteE()
+	if !validateRequiredFlags(command.FlagSet) {
+		return Command{}, fmt.Errorf("not all required flags passed")
 	}
-	if command.Run != nil {
-		command.Execute()
-		return nil
-	}
-	return fmt.Errorf("no function to run")
+	return command, nil
 }
 
 func inheritFlags(cmd *Command) {
@@ -33,44 +31,68 @@ func inheritFlags(cmd *Command) {
 	}
 }
 
+func validateRequiredFlags(flags FlagSet) bool {
+	for _, f := range flags.Flags {
+		if !f.Required() {
+			continue
+		}
+		if !f.Parsed() {
+			return false
+		}
+	}
+	return true
+}
+
 // evaluate function will parse the os.Args and compare args slice
 // with command passed as an argument
 func evaluate(cmd Command, args []string) (Command, error) {
-	flagSet := NewFlagSet()
 	var err error
+	var value string
 	for i := 0; i < len(args); i++ {
+		value = ""
 		item := args[i]
 		if item == cmd.Name {
 			continue
 		}
 		item = strings.TrimLeft(item, "-")
-		flag, ok := cmd.Flags()[item]
-		if ok {
+		if strings.Contains(item, "=") {
+			item, value = splitEqualsChar(item)
+		}
+		flag := cmd.Flag(item)
+		if flag != nil {
 			switch flag.Value().(type) {
 			case *bool:
-				err = flag.Parse("")
+				value = "true"
+				err = flag.Parse(value)
 			default:
-				err = flag.Parse(args[i+1])
+				if value == "" {
+					if i == len(args)-1 {
+						return Command{}, fmt.Errorf("no value provided")
+					}
+					value = args[i+1]
+					i++
+				}
+				err = flag.Parse(value)
 			}
 			if err != nil {
 				return Command{}, err
 			}
-			if flag.Shared() {
-				flagSet.AddFlag(flag)
-			}
-			i++
+			flag.SetParsed()
 			continue
 		}
-		// lookup for subcommands
 		command, ok := cmd.Subcommands[item]
 		if ok {
 			cmd, err = evaluate(command, args[i:])
 			if err != nil {
 				return Command{}, err
 			}
-			cmd.FlagSet.Merge(&flagSet)
 			return cmd, nil
 		}
 	}
 	return cmd, nil
+}
+
+func splitEqualsChar(in string) (string, string) {
+	split := strings.Split(in, "=")
+	return split[0], split[1]
 }
