@@ -2,9 +2,11 @@ package gocli
 
 import (
 	"strconv"
+	"strings"
+	"time"
 )
 
-type GenericFlag[T any] struct {
+type GenericFlag[T ~string | int | bool | []string | time.Duration] struct {
 	name         string
 	shorthand    string
 	description  string
@@ -15,7 +17,7 @@ type GenericFlag[T any] struct {
 	parsed       bool
 }
 
-func NewFlag[T any](name, description string) *GenericFlag[T] {
+func NewFlag[T ~string | int | bool | []string | time.Duration](name, description string) *GenericFlag[T] {
 	return &GenericFlag[T]{
 		name:        name,
 		description: description,
@@ -61,6 +63,17 @@ func (f *GenericFlag[T]) Parse(in string) error {
 		f.value = &v
 	case *bool:
 		d, err := strconv.ParseBool(in)
+		if err != nil {
+			return err
+		}
+		v := any(d).(T)
+		f.value = &v
+	case *[]string:
+		d := strings.Split(in, ",")
+		v := any(d).(T)
+		f.value = &v
+	case *time.Duration:
+		d, err := time.ParseDuration(in)
 		if err != nil {
 			return err
 		}

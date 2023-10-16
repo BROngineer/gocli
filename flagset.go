@@ -2,6 +2,7 @@ package gocli
 
 import (
 	"fmt"
+	"time"
 )
 
 type Flag interface {
@@ -51,37 +52,61 @@ func (f *FlagSet) Flag(name string) Flag {
 }
 
 func (f *FlagSet) GetString(name string) (*string, error) {
-	flag, found := f.Flags[name]
-	if !found {
+	flag := f.Flag(name)
+	if flag == nil {
 		return nil, fmt.Errorf("no flag found")
 	}
 	v, ok := flag.Value().(*string)
-	if !ok {
-		return nil, fmt.Errorf("not a string type")
+	if ok {
+		return v, nil
 	}
-	return v, nil
+	return nil, fmt.Errorf("not a string type")
 }
 
 func (f *FlagSet) GetInt(name string) (*int, error) {
-	flag, found := f.Flags[name]
-	if !found {
+	flag := f.Flag(name)
+	if flag == nil {
 		return nil, fmt.Errorf("no flag found")
 	}
 	v, ok := flag.Value().(*int)
-	if !ok {
-		return nil, fmt.Errorf("not an int type")
+	if ok {
+		return v, nil
 	}
-	return v, nil
+	return nil, fmt.Errorf("not an int type")
 }
 
 func (f *FlagSet) GetBool(name string) (*bool, error) {
-	flag, found := f.Flags[name]
-	if !found {
+	flag := f.Flag(name)
+	if flag == nil {
 		return nil, fmt.Errorf("no flag found")
 	}
 	v, ok := flag.Value().(*bool)
-	if !ok {
-		return nil, fmt.Errorf("not a boolean type")
+	if ok {
+		return v, nil
 	}
-	return v, nil
+	return nil, fmt.Errorf("not a boolean type")
+}
+
+func (f *FlagSet) GetStringSlice(name string) (*[]string, error) {
+	flag := f.Flag(name)
+	if flag == nil {
+		return nil, fmt.Errorf("no flag found")
+	}
+	v, ok := flag.Value().(*[]string)
+	if ok {
+		return v, nil
+	}
+	return nil, fmt.Errorf("not a string slice type")
+}
+
+func (f *FlagSet) GetDuration(name string) (*time.Duration, error) {
+	flag := f.Flag(name)
+	if flag == nil {
+		return nil, fmt.Errorf("no flag found")
+	}
+	v, ok := flag.Value().(*time.Duration)
+	if ok {
+		return v, nil
+	}
+	return nil, fmt.Errorf("not a time.Duration type")
 }
