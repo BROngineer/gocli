@@ -6,6 +6,7 @@ import (
 
 type GenericFlag[T any] struct {
 	name         string
+	shorthand    string
 	description  string
 	defaultValue *T
 	value        *T
@@ -21,7 +22,12 @@ func NewFlag[T any](name, description string) *GenericFlag[T] {
 	}
 }
 
-func (f *GenericFlag[T]) SetDefault(value T) *GenericFlag[T] {
+func (f *GenericFlag[T]) WithShorthand(s string) *GenericFlag[T] {
+	f.shorthand = s
+	return f
+}
+
+func (f *GenericFlag[T]) WithDefault(value T) *GenericFlag[T] {
 	f.defaultValue = &value
 	return f
 }
