@@ -36,6 +36,10 @@ func (f *GenericFlag[T]) Name() string {
 	return f.name
 }
 
+func (f *GenericFlag[T]) Shorthand() string {
+	return f.shorthand
+}
+
 func (f *GenericFlag[T]) Value() any {
 	if f.value == nil {
 		return f.defaultValue

@@ -6,6 +6,7 @@ import (
 
 type Flag interface {
 	Name() string
+	Shorthand() string
 	Value() any
 	Parse(string) error
 	Shared() bool
@@ -37,7 +38,16 @@ func (f *FlagSet) AddFlag(flag Flag) {
 }
 
 func (f *FlagSet) Flag(name string) Flag {
-	return f.Flags[name]
+	flag, found := f.Flags[name]
+	if found {
+		return flag
+	}
+	for _, flag = range f.Flags {
+		if flag.Shorthand() == name {
+			return flag
+		}
+	}
+	return nil
 }
 
 func (f *FlagSet) GetString(name string) (*string, error) {
