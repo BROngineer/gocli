@@ -22,10 +22,9 @@ func Evaluate(rootCommand Command) (Command, error) {
 func inheritFlags(cmd *Command) {
 	for _, subcommand := range cmd.Subcommands {
 		for _, flag := range cmd.Flags() {
-			if !flag.Shared() {
-				continue
+			if flag.Shared() {
+				subcommand.WithFlag(flag)
 			}
-			subcommand.FlagSet.AddFlag(flag)
 		}
 		inheritFlags(&subcommand)
 	}
@@ -33,10 +32,10 @@ func inheritFlags(cmd *Command) {
 
 func validateRequiredFlags(flags FlagSet) bool {
 	for _, f := range flags.Flags {
-		if !f.Required() {
+		if f.Parsed() {
 			continue
 		}
-		if !f.Parsed() {
+		if f.Required() {
 			return false
 		}
 	}
