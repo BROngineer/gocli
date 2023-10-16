@@ -6,9 +6,9 @@ import (
 )
 
 type Config interface {
-	LoadFromFiles([]string)
-	LoadFromEnv(string)
-	LoadFromFlags(FlagSet)
+	LoadFromFiles(paths []string) error
+	LoadFromEnv(prefix string) error
+	LoadFromFlags(flags FlagSet) error
 }
 
 func GetConfigValue[T any](cfg Config, field string) *T {

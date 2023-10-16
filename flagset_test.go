@@ -42,38 +42,16 @@ func BenchmarkFlagSet_Flag(b *testing.B) {
 	}
 }
 
-func BenchmarkFlagSet_GetString(b *testing.B) {
+func BenchmarkGetValue(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
+	set := NewFlagSet()
+	set.AddFlag(NewFlag[string]("test-string", ""))
+	set.AddFlag(NewFlag[int]("test-int", ""))
+	set.AddFlag(NewFlag[bool]("test-bool", ""))
 	for i := 0; i < b.N; i++ {
-		set := NewFlagSet()
-		set.AddFlag(NewFlag[string]("test", ""))
-		flag := set.Flag("test")
-		_ = flag.Parse("sample")
-		_, _ = set.GetString("test")
-	}
-}
-
-func BenchmarkFlagSet_GetInt(b *testing.B) {
-	b.ResetTimer()
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		set := NewFlagSet()
-		set.AddFlag(NewFlag[int]("test", ""))
-		flag := set.Flag("test")
-		_ = flag.Parse("42")
-		_, _ = set.GetInt("test")
-	}
-}
-
-func BenchmarkFlagSet_GetBool(b *testing.B) {
-	b.ResetTimer()
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		set := NewFlagSet()
-		set.AddFlag(NewFlag[bool]("test", ""))
-		flag := set.Flag("test")
-		_ = flag.Parse("true")
-		_, _ = set.GetBool("test")
+		_, _ = GetValue[string](set, "test-string")
+		_, _ = GetValue[int](set, "test-int")
+		_, _ = GetValue[bool](set, "test-bool")
 	}
 }
