@@ -10,6 +10,7 @@ type Command struct {
 	Run         func(Command)
 	RunE        func(Command) error
 	FlagSet     FlagSet
+	Config      Config
 }
 
 func NewCommand(name string) Command {
@@ -47,6 +48,11 @@ func (c Command) WithRunEFunc(f func(Command) error) Command {
 
 func (c Command) WithFlag(flag Flag) Command {
 	c.FlagSet.AddFlag(flag)
+	return c
+}
+
+func (c Command) WithConfig(cfg Config) Command {
+	c.Config = cfg
 	return c
 }
 

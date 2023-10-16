@@ -6,17 +6,35 @@ import (
 	"strings"
 )
 
-func Evaluate(rootCommand Command) (Command, error) {
+type CLIApp struct {
+	command   Command
+	evaluated bool
+}
+
+func NewCLIApp() *CLIApp {
+	return &CLIApp{}
+}
+
+func (c *CLIApp) Evaluate(rootCommand Command) error {
 	args := os.Args
 	inheritFlags(&rootCommand)
 	command, err := evaluate(rootCommand, args)
 	if err != nil {
-		return Command{}, err
+		return err
 	}
 	if !validateRequiredFlags(command.FlagSet) {
-		return Command{}, fmt.Errorf("not all required flags passed")
+		return fmt.Errorf("not all required flags passed")
 	}
-	return command, nil
+	c.command = command
+	c.evaluated = true
+	return nil
+}
+
+func (c *CLIApp) Execute() error {
+	if c.evaluated {
+		return c.command.Execute()
+	}
+	return fmt.Errorf("input have to be evaluated before execution")
 }
 
 func inheritFlags(cmd *Command) {
