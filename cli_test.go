@@ -68,6 +68,10 @@ func TestValidateFlags(t *testing.T) {
 	fs.AddFlag(NewFlag[string]("flag", ""))
 	err = validateFlags(fs)
 	assert.Error(t, err)
+	fs = NewFlagSet()
+	fs.AddFlag(NewFlag[string]("flag", "").WithDefault("value"))
+	err = validateFlags(fs)
+	assert.NoError(t, err)
 }
 
 func TestSplitEqualsChar(t *testing.T) {
