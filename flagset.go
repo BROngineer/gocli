@@ -2,7 +2,6 @@ package gocli
 
 import (
 	"fmt"
-	"time"
 )
 
 type Flag interface {
@@ -52,7 +51,7 @@ func (f *FlagSet) Flag(name string) Flag {
 	return nil
 }
 
-func GetValue[T ~string | int | bool | []string | time.Duration](flagSet FlagSet, flagName string) (*T, error) {
+func GetValue[T allowed](flagSet FlagSet, flagName string) (*T, error) {
 	flag := flagSet.Flag(flagName)
 	if flag == nil {
 		return nil, fmt.Errorf("no flag found")

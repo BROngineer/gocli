@@ -6,7 +6,11 @@ import (
 	"time"
 )
 
-type GenericFlag[T ~string | int | bool | []string | time.Duration] struct {
+type allowed interface {
+	~string | ~int | ~bool | ~[]string | time.Duration
+}
+
+type GenericFlag[T allowed] struct {
 	name         string
 	shorthand    string
 	description  string
@@ -17,7 +21,7 @@ type GenericFlag[T ~string | int | bool | []string | time.Duration] struct {
 	parsed       bool
 }
 
-func NewFlag[T ~string | int | bool | []string | time.Duration](name, description string) *GenericFlag[T] {
+func NewFlag[T allowed](name, description string) *GenericFlag[T] {
 	return &GenericFlag[T]{
 		name:        name,
 		description: description,
