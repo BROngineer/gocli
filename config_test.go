@@ -57,3 +57,14 @@ func BenchmarkGetConfigValue(b *testing.B) {
 		_ = GetConfigValue[string](config, "field1")
 	}
 }
+
+func BenchmarkCastConfig(b *testing.B) {
+	b.ResetTimer()
+	b.ReportAllocs()
+	cfg := &TestConfig{Field1: "test", Field2: 42, Field3: true}
+	cmd := NewCommand("test").WithConfig(cfg)
+	raw := cmd.Config
+	for i := 0; i < b.N; i++ {
+		_ = CastConfig[TestConfig](raw)
+	}
+}

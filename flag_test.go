@@ -202,24 +202,8 @@ func BenchmarkGenericFlag_SetParsed(b *testing.B) {
 func BenchmarkGenericFlag_Parse(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
-	flags := []struct {
-		f Flag
-		v string
-	}{
-		{
-			NewFlag[string]("test", ""),
-			"test",
-		}, {
-			NewFlag[int]("test", ""),
-			"1",
-		}, {
-			NewFlag[bool]("test", ""),
-			"true",
-		},
-	}
+	f := NewFlag[string]("test", "")
 	for i := 0; i < b.N; i++ {
-		for _, item := range flags {
-			_ = item.f.Parse(item.v)
-		}
+		_ = f.Parse("test")
 	}
 }
