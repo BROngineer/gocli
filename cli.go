@@ -2,7 +2,7 @@ package gocli
 
 import (
 	"fmt"
-	"os"
+	"reflect"
 	"strings"
 )
 
@@ -15,8 +15,7 @@ func NewCLIApp() *CLIApp {
 	return &CLIApp{}
 }
 
-func (c *CLIApp) Evaluate(rootCommand Command) error {
-	args := os.Args[1:]
+func (c *CLIApp) Evaluate(rootCommand Command, args []string) error {
 	inheritFlags(&rootCommand)
 	command, err := evaluate(rootCommand, args)
 	if err != nil {
@@ -57,7 +56,8 @@ func validateFlags(flags FlagSet) error {
 		if f.Required() {
 			return fmt.Errorf("flag %s is required", f.Name())
 		}
-		if f.ValueOrDefault() == nil {
+		v := reflect.ValueOf(f.ValueOrDefault())
+		if v.IsZero() {
 			return fmt.Errorf("optional flags require default value")
 		}
 	}
