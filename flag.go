@@ -40,10 +40,17 @@ type GenericFlag[T allowed] struct {
 }
 
 func NewFlag[T allowed](name, description string) *GenericFlag[T] {
-	return &GenericFlag[T]{
+	defaultBoolFlag := false
+	f := &GenericFlag[T]{
 		name:        name,
 		description: description,
 	}
+	switch f.Val.Value().(type) {
+	case *bool:
+		f.DefVal.val = any(&defaultBoolFlag).(*T)
+		f.DefVal.defined = true
+	}
+	return f
 }
 
 func (f *GenericFlag[T]) WithShorthand(s string) *GenericFlag[T] {

@@ -2,6 +2,7 @@ package gocli
 
 import (
 	"fmt"
+	"path"
 	"strings"
 )
 
@@ -60,9 +61,6 @@ func evaluate(cmd Command, args []string) (Command, error) {
 	for i := 0; i < len(args); i++ {
 		value = ""
 		arg := args[i]
-		if arg == cmd.Name {
-			continue
-		}
 		if strings.HasPrefix(arg, "-") {
 			arg = strings.TrimLeft(arg, "-")
 			if strings.Contains(arg, "=") {
@@ -96,6 +94,10 @@ func evaluate(cmd Command, args []string) (Command, error) {
 			}
 			return Command{}, fmt.Errorf("flag -%s is not defined for command %s", arg, cmd.Name)
 		}
+		arg = sanitizeCommand(args[i])
+		if arg == cmd.Name {
+			continue
+		}
 		command, ok := cmd.Subcommands[arg]
 		if ok {
 			cmd, err = evaluate(command, args[i:])
@@ -113,4 +115,10 @@ func evaluate(cmd Command, args []string) (Command, error) {
 func splitEqualsChar(in string) (string, string) {
 	split := strings.Split(in, "=")
 	return split[0], split[1]
+}
+
+func sanitizeCommand(input string) string {
+	cleaned := path.Clean(input)
+	file := path.Base(cleaned)
+	return file
 }
