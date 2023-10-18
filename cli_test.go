@@ -6,37 +6,21 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewCLIApp(t *testing.T) {
-	t.Parallel()
-	cli := NewCLIApp()
-	assert.NotNil(t, cli)
-}
-
-func TestCLIApp_Evaluate(t *testing.T) {
+func TestRun(t *testing.T) {
 	var cmd Command
 	var err error
 	t.Parallel()
 	cmd = NewCommand("test")
-	cli := NewCLIApp()
-	err = cli.Evaluate(cmd, []string{})
+	err = Run(cmd, []string{})
+	assert.Error(t, err)
+	cmd = cmd.WithRunFunc(func(command Command) {})
+	err = Run(cmd, []string{})
 	assert.NoError(t, err)
-	err = cli.Evaluate(cmd, []string{"-f"})
+	err = Run(cmd, []string{"-f"})
 	assert.Error(t, err)
 	cmd = NewCommand("test").WithFlag(NewFlag[string]("flag", ""))
-	err = cli.Evaluate(cmd, []string{"test"})
+	err = Run(cmd, []string{"test"})
 	assert.Error(t, err)
-}
-
-func TestCLIApp_Execute(t *testing.T) {
-	t.Parallel()
-	cli := NewCLIApp()
-	err := cli.Execute()
-	assert.Error(t, err)
-	cmd := NewCommand("test").WithRunFunc(func(command Command) {})
-	err = cli.Evaluate(cmd, []string{})
-	assert.NoError(t, err)
-	err = cli.Execute()
-	assert.NoError(t, err)
 }
 
 func TestInheritFlags(t *testing.T) {

@@ -5,35 +5,22 @@ import (
 	"strings"
 )
 
-type CLIApp struct {
-	command   Command
-	evaluated bool
-}
+func Run(rootCommand Command, args []string) error {
+	var (
+		cmd Command
+		err error
+	)
 
-func NewCLIApp() *CLIApp {
-	return &CLIApp{}
-}
-
-func (c *CLIApp) Evaluate(rootCommand Command, args []string) error {
 	inheritFlags(&rootCommand)
-	command, err := evaluate(rootCommand, args)
+	cmd, err = evaluate(rootCommand, args)
 	if err != nil {
 		return err
 	}
-	err = validateFlags(command.FlagSet)
+	err = validateFlags(cmd.FlagSet)
 	if err != nil {
 		return err
 	}
-	c.command = command
-	c.evaluated = true
-	return nil
-}
-
-func (c *CLIApp) Execute() error {
-	if c.evaluated {
-		return c.command.Execute()
-	}
-	return fmt.Errorf("input have to be evaluated before execution")
+	return cmd.Execute()
 }
 
 func inheritFlags(cmd *Command) {
