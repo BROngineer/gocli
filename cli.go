@@ -2,7 +2,6 @@ package gocli
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 )
 
@@ -56,9 +55,8 @@ func validateFlags(flags FlagSet) error {
 		if f.Required() {
 			return fmt.Errorf("flag %s is required", f.Name())
 		}
-		v := reflect.ValueOf(f.ValueOrDefault())
-		if v.IsZero() {
-			return fmt.Errorf("optional flags require default value")
+		if f.ValueOrDefault().IsNil() {
+			return fmt.Errorf("optional flags require default Val")
 		}
 	}
 	return nil
@@ -85,16 +83,16 @@ func evaluate(cmd Command, args []string) (Command, error) {
 			}
 			flag := cmd.Flag(arg)
 			if flag != nil {
-				switch flag.Value().(type) {
+				switch flag.Value().Value().(type) {
 				case *bool:
 					value = "true"
 					err = flag.Parse(value)
 				default:
 					switch {
 					case value == "" && i == len(args)-1:
-						return Command{}, fmt.Errorf("no value passed for flag %s", flag.Name())
+						return Command{}, fmt.Errorf("no Val passed for flag %s", flag.Name())
 					case value == "" && strings.HasPrefix(args[i+1], "-"):
-						return Command{}, fmt.Errorf("no value passed for flag %s", flag.Name())
+						return Command{}, fmt.Errorf("no Val passed for flag %s", flag.Name())
 					case value == "":
 						value = args[i+1]
 						i++

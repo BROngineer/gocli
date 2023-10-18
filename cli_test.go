@@ -69,17 +69,17 @@ func TestValidateFlags(t *testing.T) {
 	err = validateFlags(fs)
 	assert.Error(t, err)
 	fs = NewFlagSet()
-	fs.AddFlag(NewFlag[string]("flag", "").WithDefault("value"))
+	fs.AddFlag(NewFlag[string]("flag", "").WithDefault("Val"))
 	err = validateFlags(fs)
 	assert.NoError(t, err)
 }
 
 func TestSplitEqualsChar(t *testing.T) {
 	t.Parallel()
-	input := "flag=value"
+	input := "flag=Val"
 	flag, value := splitEqualsChar(input)
 	assert.Equal(t, "flag", flag)
-	assert.Equal(t, "value", value)
+	assert.Equal(t, "Val", value)
 }
 
 func TestEvaluate(t *testing.T) {

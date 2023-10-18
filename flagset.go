@@ -7,8 +7,8 @@ import (
 type Flag interface {
 	Name() string
 	Shorthand() string
-	Value() any
-	ValueOrDefault() any
+	Value() FlagValue
+	ValueOrDefault() FlagValue
 	Parse(string) error
 	Shared() bool
 	SetShared() Flag
@@ -56,7 +56,11 @@ func GetValue[T allowed](flagSet FlagSet, flagName string) (*T, error) {
 	if flag == nil {
 		return nil, fmt.Errorf("no flag found")
 	}
-	v, ok := flag.ValueOrDefault().(*T)
+	val := flag.ValueOrDefault()
+	if val.IsNil() {
+		return nil, nil
+	}
+	v, ok := val.Value().(*T)
 	if ok {
 		return v, nil
 	}

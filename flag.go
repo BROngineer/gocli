@@ -10,15 +10,33 @@ type allowed interface {
 	~string | ~int | ~bool | ~[]string | time.Duration
 }
 
+type FlagValue interface {
+	IsNil() bool
+	Value() any
+}
+
+type Value[T allowed] struct {
+	defined bool
+	val     *T
+}
+
+func (v Value[T]) IsNil() bool {
+	return !v.defined
+}
+
+func (v Value[T]) Value() any {
+	return v.val
+}
+
 type GenericFlag[T allowed] struct {
-	name         string
-	shorthand    string
-	description  string
-	defaultValue *T
-	value        *T
-	shared       bool
-	required     bool
-	parsed       bool
+	name        string
+	shorthand   string
+	description string
+	DefVal      Value[T]
+	Val         Value[T]
+	shared      bool
+	required    bool
+	parsed      bool
 }
 
 func NewFlag[T allowed](name, description string) *GenericFlag[T] {
@@ -34,7 +52,7 @@ func (f *GenericFlag[T]) WithShorthand(s string) *GenericFlag[T] {
 }
 
 func (f *GenericFlag[T]) WithDefault(value T) *GenericFlag[T] {
-	f.defaultValue = &value
+	f.DefVal = Value[T]{true, &value}
 	return f
 }
 
@@ -46,48 +64,45 @@ func (f *GenericFlag[T]) Shorthand() string {
 	return f.shorthand
 }
 
-func (f *GenericFlag[T]) Value() any {
-	return f.value
+func (f *GenericFlag[T]) Value() FlagValue {
+	return f.Val
 }
 
-func (f *GenericFlag[T]) ValueOrDefault() any {
-	if f.value == nil {
-		return f.defaultValue
+func (f *GenericFlag[T]) ValueOrDefault() FlagValue {
+	if !f.Val.IsNil() {
+		return f.Val
 	}
-	return f.value
+	return f.DefVal
 }
 
 func (f *GenericFlag[T]) Parse(in string) error {
-	switch any(f.value).(type) {
+	var v T
+	switch f.Val.Value().(type) {
 	case *string:
-		v := any(in).(T)
-		f.value = &v
+		v = any(in).(T)
 	case *int:
 		d, err := strconv.Atoi(in)
 		if err != nil {
 			return err
 		}
-		v := any(d).(T)
-		f.value = &v
+		v = any(d).(T)
 	case *bool:
 		d, err := strconv.ParseBool(in)
 		if err != nil {
 			return err
 		}
-		v := any(d).(T)
-		f.value = &v
+		v = any(d).(T)
 	case *[]string:
 		d := strings.Split(in, ",")
-		v := any(d).(T)
-		f.value = &v
+		v = any(d).(T)
 	case *time.Duration:
 		d, err := time.ParseDuration(in)
 		if err != nil {
 			return err
 		}
-		v := any(d).(T)
-		f.value = &v
+		v = any(d).(T)
 	}
+	f.Val = Value[T]{true, &v}
 	return nil
 }
 

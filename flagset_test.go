@@ -62,6 +62,10 @@ func TestGetValue(t *testing.T) {
 	assert.Error(t, err)
 	_, err = GetValue[int](fs, "test")
 	assert.Error(t, err)
+	fs.AddFlag(NewFlag[string]("flag", ""))
+	v, err = GetValue[string](fs, "flag")
+	assert.NoError(t, err)
+	assert.Nil(t, v)
 }
 
 func BenchmarkNewFlagSet(b *testing.B) {
