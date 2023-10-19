@@ -24,7 +24,7 @@ import (
   "fmt"
   "os"
 
-  "github.com/brongineer/gocli"
+  "github.com/brodevkit/gocli"
 )
 
 func runCommandExec(cmd gocli.Command) {
@@ -76,7 +76,7 @@ import (
   "fmt"
   "os"
 
-  "github.com/brongineer/gocli"
+  "github.com/brodevkit/gocli"
 )
 
 type CmdConfig struct {
