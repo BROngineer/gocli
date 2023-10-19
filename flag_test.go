@@ -1,6 +1,7 @@
 package gocli
 
 import (
+	"errors"
 	"reflect"
 	"strconv"
 	"strings"
@@ -93,12 +94,14 @@ func TestGenericFlag_ParseString(t *testing.T) {
 }
 
 func TestGenericFlag_ParseInt(t *testing.T) {
+	var expectedErr FlagError
 	t.Parallel()
 	names := []string{"test", "flag", "sample"}
 	for i := 0; i < len(names); i++ {
 		n := NewFlag[int](names[i], "")
 		err := n.Parse("10s")
 		assert.Error(t, err)
+		assert.True(t, errors.As(err, &expectedErr))
 		err = n.Parse(strconv.Itoa(i))
 		assert.NoError(t, err)
 		v1 := n.Value().Value().(*int)
@@ -110,12 +113,15 @@ func TestGenericFlag_ParseInt(t *testing.T) {
 }
 
 func TestGenericFlag_ParseBool(t *testing.T) {
+	var expectedErr FlagError
 	t.Parallel()
 	names := []string{"test", "flag", "sample"}
 	for i := 0; i < len(names); i++ {
 		n := NewFlag[bool](names[i], "")
 		err := n.Parse(names[i])
 		assert.Error(t, err)
+		assert.True(t, errors.As(err, &expectedErr))
+		assert.True(t, errors.Is(err, ParseBoolError()))
 		err = n.Parse("true")
 		assert.NoError(t, err)
 		v1 := n.Value().Value().(*bool)
@@ -143,12 +149,14 @@ func TestGenericFlag_ParseStringSlice(t *testing.T) {
 }
 
 func TestGenericFlag_ParseDuration(t *testing.T) {
+	var expectedErr FlagError
 	t.Parallel()
 	names := []string{"test", "flag", "sample"}
 	for i := 0; i < len(names); i++ {
 		n := NewFlag[time.Duration](names[i], "")
 		err := n.Parse("20")
 		assert.Error(t, err)
+		assert.True(t, errors.As(err, &expectedErr))
 		err = n.Parse("10s")
 		assert.NoError(t, err)
 		v1 := n.Value().Value().(*time.Duration)

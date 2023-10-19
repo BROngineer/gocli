@@ -41,10 +41,10 @@ func validateFlags(flags FlagSet) error {
 			continue
 		}
 		if f.Required() {
-			return fmt.Errorf("flag %s is required", f.Name())
+			return NewFlagError(fmt.Sprintf(MissedRequiredFlagErrorMessage, f.Name()))
 		}
 		if f.ValueOrDefault().IsNil() {
-			return fmt.Errorf("optional flags require default Val")
+			return NewFlagError(fmt.Sprintf(MissedDefaultValueErrorMessage, f.Name()))
 		}
 	}
 	return nil
@@ -75,9 +75,9 @@ func evaluate(cmd Command, args []string) (Command, error) {
 				default:
 					switch {
 					case value == "" && i == len(args)-1:
-						return Command{}, fmt.Errorf("no Val passed for flag %s", flag.Name())
+						return Command{}, NewFlagError(fmt.Sprintf(MissedFlagValueErrorMessage, flag.Name()))
 					case value == "" && strings.HasPrefix(args[i+1], "-"):
-						return Command{}, fmt.Errorf("no Val passed for flag %s", flag.Name())
+						return Command{}, NewFlagError(fmt.Sprintf(MissedFlagValueErrorMessage, flag.Name()))
 					case value == "":
 						value = args[i+1]
 						i++
@@ -92,7 +92,7 @@ func evaluate(cmd Command, args []string) (Command, error) {
 				flag.SetParsed()
 				continue
 			}
-			return Command{}, fmt.Errorf("flag -%s is not defined for command %s", arg, cmd.Name)
+			return Command{}, NewCommandError(fmt.Sprintf(UndefinedFlagErrorMessage, arg, cmd.Name))
 		}
 		arg = sanitizeCommand(args[i])
 		if arg == cmd.Name {
@@ -106,7 +106,7 @@ func evaluate(cmd Command, args []string) (Command, error) {
 			}
 			return cmd, nil
 		} else {
-			return Command{}, fmt.Errorf("unrecognized command %s", arg)
+			return Command{}, NewCommandError(fmt.Sprintf(UndefinedCommandErrorMessage, arg))
 		}
 	}
 	return cmd, nil

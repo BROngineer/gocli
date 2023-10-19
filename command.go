@@ -1,9 +1,5 @@
 package gocli
 
-import (
-	"fmt"
-)
-
 type Command struct {
 	Name        string
 	Subcommands map[string]Command
@@ -64,5 +60,5 @@ func (c Command) Execute() error {
 		c.Run(c)
 		return nil
 	}
-	return fmt.Errorf("no function to execute")
+	return CommandExecuteError()
 }

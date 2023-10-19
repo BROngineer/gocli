@@ -1,9 +1,5 @@
 package gocli
 
-import (
-	"fmt"
-)
-
 type Flag interface {
 	Name() string
 	Shorthand() string
@@ -54,7 +50,7 @@ func (f *FlagSet) Flag(name string) Flag {
 func GetValue[T allowed](flagSet FlagSet, flagName string) (*T, error) {
 	flag := flagSet.Flag(flagName)
 	if flag == nil {
-		return nil, fmt.Errorf("no flag found")
+		return nil, FlagNotFoundError()
 	}
 	val := flag.ValueOrDefault()
 	if val.IsNil() {
@@ -64,5 +60,5 @@ func GetValue[T allowed](flagSet FlagSet, flagName string) (*T, error) {
 	if ok {
 		return v, nil
 	}
-	return nil, fmt.Errorf("not a %T type", flag.Value())
+	return nil, FlagTypeMismatchError()
 }

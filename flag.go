@@ -90,13 +90,13 @@ func (f *GenericFlag[T]) Parse(in string) error {
 	case *int:
 		d, err := strconv.Atoi(in)
 		if err != nil {
-			return err
+			return ParseIntError().Wrap(err)
 		}
 		v = any(d).(T)
 	case *bool:
 		d, err := strconv.ParseBool(in)
 		if err != nil {
-			return err
+			return ParseBoolError().Wrap(err)
 		}
 		v = any(d).(T)
 	case *[]string:
@@ -105,7 +105,7 @@ func (f *GenericFlag[T]) Parse(in string) error {
 	case *time.Duration:
 		d, err := time.ParseDuration(in)
 		if err != nil {
-			return err
+			return ParseDurationError().Wrap(err)
 		}
 		v = any(d).(T)
 	}
