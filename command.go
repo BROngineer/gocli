@@ -1,4 +1,4 @@
-package cli
+package gocli
 
 import (
 	"errors"
@@ -28,7 +28,7 @@ func NewCommand(name string, opts ...CommandOption) *Command {
 	return cmd
 }
 
-func (c *Command) Flag(name string) Flag {
+func (c *Command) FlagByName(name string) Flag {
 	flag, ok := c.Flags[name]
 	if ok {
 		return flag
@@ -41,8 +41,8 @@ func (c *Command) Flag(name string) Flag {
 	return flag
 }
 
-func GetFlagValue[T allowed](cmd *Command, flagName string) (*T, error) {
-	flag := cmd.Flag(flagName)
+func FlagValue[T allowed](cmd *Command, flagName string) (*T, error) {
+	flag := cmd.FlagByName(flagName)
 	if flag == nil {
 		return nil, errors.New("flag not found")
 	}

@@ -1,4 +1,4 @@
-package cli
+package gocli
 
 import (
 	"time"
@@ -29,7 +29,7 @@ func FloatFlag(name string, opts ...FlagOption) Flag {
 }
 
 func BoolFlag(name string, opts ...FlagOption) Flag {
-	f := &genericFlag[bool]{name: name}
+	f := &genericFlag[bool]{name: name, defVal: initValue[bool]()}
 	for _, opt := range opts {
 		opt(f)
 	}

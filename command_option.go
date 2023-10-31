@@ -1,4 +1,4 @@
-package cli
+package gocli
 
 type CommandOption func(cmd *Command)
 

@@ -24,28 +24,41 @@ import (
   "fmt"
   "os"
 
-  "github.com/brodevkit/gocli"
+  "github.com/brongineer/gocli"
 )
 
-func runCommandExec(cmd gocli.Command) {
-  env, _ := gocli.GetValue[string](cmd.FlagSet, "env")
-  verbose, _ := gocli.GetValue[bool](cmd.FlagSet, "verbose")
-  fmt.Printf("Running in %s environment\n", *env)
-  fmt.Printf("Verbose output: %v\n", *verbose)
+// root command where CLI app execution starts from
+var rootCommand = gocli.NewCommand("example",
+    gocli.Flags(
+      gocli.BoolFlag("verbose", gocli.Shorthand("v"), gocli.Shared()),
+      gocli.StringFlag("log-level", gocli.Shorthand("l"), gocli.Shared(), gocli.Default[string]("info")),
+      gocli.StringFlag("log-file", gocli.Shared(), gocli.Required()),
+    ),
+    gocli.Subcommands(runCommand))
+
+// subcommand which contains function doing actual work
+var runCommand = gocli.NewCommand("run", 
+    gocli.Flags(
+      gocli.StringFlag("host", gocli.Shorthand("h"), gocli.Default[string]("127.0.0.1")), 
+      gocli.IntFlag("port", gocli.Shorthand("p"), gocli.Default[int](80)), 
+    ), 
+    gocli.RunFunction(DoWork))
+
+func DoWork(cmd *gocli.Command) {
+  verbose, _ := gocli.FlagValue[bool](cmd, "verbose")
+  logLevel, _ := gocli.FlagValue[string](cmd, "log-level")
+  logFile, _ := gocli.FlagValue[string](cmd, "log-file")
+  host, _ := gocli.FlagValue[string](cmd, "h")
+  port, _ := gocli.FlagValue[int](cmd, "p")
+  if *verbose {
+    fmt.Printf("running on %s:%d; log level: %s, log file: %s\n", *host, *port, *logLevel, *logFile)
+    return
+  }
+  fmt.Println(*host, *port, *logLevel, *logFile)
 }
 
-var (
-  runCommand = gocli.NewCommand("run").
-    WithFlag(gocli.NewFlag[string]("env", "").WithDefault("DEV")).
-    WithRunFunc(runCommandExec)
-
-  rootCommand = gocli.NewCommand("example").
-    WithSubcommand(runCommand).
-    WithFlag(gocli.NewFlag[bool]("verbose", "").SetShared())
-)
-
 func main() {
-  err := gocli.Run(rootCommand, os.Args)
+  err := gocli.Run(rootCommand)
   if err != nil {
     fmt.Println(err)
     os.Exit(1)
@@ -54,89 +67,15 @@ func main() {
 }
 ```
 ```shell
-> example run
+# flags "--log-level", "--log-file" and "--verbose" (shorthand "-v") can be placed 
+# either before or after "run" subcommand since they are declared as shared and will 
+# be inherited by all subcommand of root command
+
+> example run --log-level trace -log-file /var/log/example.log -v
 # Output
-Running in DEV environment
-Verbose output: false
+running on 127.0.0.1:80; log level: trace, log file: /var/log/example.log
 
-> example run -env=prod -verbose
+> example run --log-level trace -log-file /var/log/example.log -p 8081
 # Output
-Running in prod environment
-Verbose output: true
-```
-
-##### Command custom config example
-
-Here is an example of how to add and leverage  user-defined config structure for `gocli.Command`
-
-```go
-package main
-
-import (
-  "fmt"
-  "os"
-
-  "github.com/brodevkit/gocli"
-)
-
-type CmdConfig struct {
-  Message string
-  Verbose bool
-}
-
-func (c *CmdConfig) LoadFromFlags(flags gocli.FlagSet) error {
-  // your custom logic here, for instance:
-  m, _ := gocli.GetValue[string](flags, "message")
-  c.Message = *m
-  v, _ := gocli.GetValue[bool](flags, "verbose")
-  c.Verbose = *v
-  return nil
-}
-
-func (c *CmdConfig) LoadFromEnv(prefix string) error {
-  // your custom logic here
-  return nil
-}
-
-func (c *CmdConfig) LoadFromFiles(files []string) error {
-  // your custom logic here
-  return nil
-}
-
-func actualWork(cfg *CmdConfig) error {
-  if cfg.Verbose {
-    fmt.Printf("This is verbose message: %s\n", cfg.Message)
-	return nil
-  }
-  fmt.Println(cfg.Message)
-  return nil
-}
-
-func runCommand(cmd gocli.Command) error {
-  err := cmd.Config.LoadFromFlags(cmd.FlagSet)
-  if err != nil {
-    return err
-  }
-  cfg := gocli.TypedConfig[CmdConfig](cmd.Config)
-  return actualWork(cfg)
-}
-
-var command = gocli.NewCommand("example").
-  WithFlag(gocli.NewFlag[bool]("verbose", "")).
-  WithFlag(gocli.NewFlag[string]("message", "")).
-  WithRunEFunc(runCommand).
-  WithConfig(&CmdConfig{})
-
-func main() {
-  _ = gocli.Run(command, os.Args)
-}
-```
-```shell
-> example -message=hello
-# Output
-hello
-
-> example -message=hello -verbose
-# Output
-This is verbose message: hello
+127.0.0.1 8081 trace /var/log/example.log
 ```

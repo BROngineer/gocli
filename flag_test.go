@@ -1,4 +1,4 @@
-package cli
+package gocli
 
 import (
 	"flag"
@@ -146,7 +146,7 @@ func TestParseFlag(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.flag.Parse(tt.value)
+			err := tt.flag.parse(tt.value)
 			assert.NoError(t, err)
 			assert.True(t, true, flag.Parsed())
 			actual := tt.flag.Value()
@@ -182,7 +182,7 @@ func TestParseFlagErr(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.flag.Parse(tt.value)
+			err := tt.flag.parse(tt.value)
 			assert.Error(t, err)
 		})
 	}

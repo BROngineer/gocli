@@ -1,4 +1,4 @@
-package cli
+package gocli
 
 import (
 	"errors"
@@ -51,12 +51,12 @@ func evaluate(cmd *Command, args []string) (*Command, error) {
 			if strings.Contains(arg, "=") {
 				arg, value = splitEqualsChar(arg)
 			}
-			flag := cmd.Flag(arg)
+			flag := cmd.FlagByName(arg)
 			if flag != nil {
 				switch flag.Value().(type) {
 				case *bool:
 					value = "true"
-					err = flag.Parse(value)
+					err = flag.parse(value)
 				default:
 					switch {
 					case value == "" && i == len(args)-1:
@@ -68,7 +68,7 @@ func evaluate(cmd *Command, args []string) (*Command, error) {
 						i++
 						fallthrough
 					default:
-						err = flag.Parse(value)
+						err = flag.parse(value)
 					}
 				}
 				if err != nil {
