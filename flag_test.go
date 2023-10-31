@@ -1,217 +1,189 @@
-package gocli
+package cli
 
 import (
-	"errors"
+	"flag"
 	"reflect"
-	"strconv"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
+type FlagComparisonAssertion func(*testing.T, Flag, Flag)
+type FlagValueAssertion func(*testing.T, any, any)
+
+func CompareFlags(t *testing.T, expect, actual Flag) {
+	assert.Equal(t, expect.Name(), actual.Name())
+	assert.Equal(t, expect.Description(), actual.Description())
+	assert.Equal(t, expect.Shorthand(), actual.Shorthand())
+	assert.Equal(t, expect.Required(), actual.Required())
+	assert.Equal(t, expect.Shared(), actual.Shared())
+	assert.Equal(t,
+		reflect.TypeOf(expect.Value()),
+		reflect.TypeOf(actual.Value()))
+}
+
+func AssertFlagValue[T allowed](t *testing.T, expect, actual any) {
+	actualTyped := actual.(*T)
+	assert.Equal(t, reflect.TypeOf(expect), reflect.TypeOf(*actualTyped))
+	assert.Equal(t, expect, *actualTyped)
+}
+
 func TestNewFlag(t *testing.T) {
+	var defVal = "default"
 	t.Parallel()
-	f := NewFlag[string]("test", "")
-	assert.NotNil(t, f)
+	tests := []struct {
+		name      string
+		expected  Flag
+		actual    Flag
+		assertion FlagComparisonAssertion
+	}{
+		{
+			"string flag",
+			&genericFlag[string]{name: "sample", description: "sample"},
+			StringFlag("sample", FlagDescription("sample")),
+			CompareFlags,
+		}, {
+			"int flag",
+			&genericFlag[int]{name: "sample", description: "sample"},
+			IntFlag("sample", FlagDescription("sample")),
+			CompareFlags,
+		}, {
+			"float flag",
+			&genericFlag[float64]{name: "sample", description: "sample"},
+			FloatFlag("sample", FlagDescription("sample")),
+			CompareFlags,
+		}, {
+			"bool flag",
+			&genericFlag[bool]{name: "sample", description: "sample"},
+			BoolFlag("sample", FlagDescription("sample")),
+			CompareFlags,
+		}, {
+			"slice flag",
+			&genericFlag[[]string]{name: "sample", description: "sample"},
+			SliceFlag("sample", FlagDescription("sample")),
+			CompareFlags,
+		}, {
+			"duration flag",
+			&genericFlag[time.Duration]{name: "sample", description: "sample"},
+			DurationFlag("sample", FlagDescription("sample")),
+			CompareFlags,
+		}, {
+			"with options",
+			&genericFlag[string]{
+				name:        "sample",
+				description: "sample",
+				shorthand:   "s",
+				required:    true,
+				shared:      true,
+				defVal: Value[string]{
+					defined: true,
+					val:     &defVal,
+				},
+			},
+			StringFlag("sample",
+				FlagDescription("sample"),
+				Shorthand("s"),
+				Required(),
+				Shared(),
+				Default[string]("default")),
+			CompareFlags,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.assertion(t, tt.expected, tt.actual)
+		})
+	}
 }
 
-func TestGenericFlag_Name(t *testing.T) {
+func TestParseFlag(t *testing.T) {
 	t.Parallel()
-	names := []string{"test", "flag", "sample"}
-	for i := 0; i < len(names); i++ {
-		n := NewFlag[string](names[i], "").Name()
-		assert.Equal(t, names[i], n)
+	tests := []struct {
+		name      string
+		value     string
+		expected  any
+		flag      Flag
+		assertion FlagValueAssertion
+	}{
+		{
+			"parse string",
+			"test",
+			"test",
+			StringFlag("sample"),
+			AssertFlagValue[string],
+		}, {
+			"parse int",
+			"42",
+			42,
+			IntFlag("sample"),
+			AssertFlagValue[int],
+		}, {
+			"parse float",
+			"1.0",
+			1.0,
+			FloatFlag("sample"),
+			AssertFlagValue[float64],
+		}, {
+			"parse bool",
+			"true",
+			true,
+			BoolFlag("sample"),
+			AssertFlagValue[bool],
+		}, {
+			"parse slice",
+			"a,b,c",
+			[]string{"a", "b", "c"},
+			SliceFlag("sample"),
+			AssertFlagValue[[]string],
+		}, {
+			"parse duration",
+			"10s",
+			time.Second * 10,
+			DurationFlag("sample"),
+			AssertFlagValue[time.Duration],
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.flag.Parse(tt.value)
+			assert.NoError(t, err)
+			assert.True(t, true, flag.Parsed())
+			actual := tt.flag.Value()
+			tt.assertion(t, tt.expected, actual)
+		})
 	}
 }
 
-func TestGenericFlag_WithDefault(t *testing.T) {
+func TestParseFlagErr(t *testing.T) {
 	t.Parallel()
-	names := []string{"test", "flag", "sample"}
-	for i := 0; i < len(names); i++ {
-		n := NewFlag[string](names[i], "").WithDefault(names[i])
-		v := n.ValueOrDefault().Value().(*string)
-		assert.NotNil(t, v)
-		assert.Equal(t, names[i], *v)
+	tests := []struct {
+		name  string
+		value string
+		flag  Flag
+	}{
+		{
+			"parse int",
+			"one",
+			IntFlag("sample"),
+		}, {
+			"parse float",
+			"",
+			FloatFlag("sample"),
+		}, {
+			"parse bool",
+			"10",
+			BoolFlag("sample"),
+		}, {
+			"parse duration",
+			"10",
+			DurationFlag("sample"),
+		},
 	}
-}
-
-func TestGenericFlag_Shared(t *testing.T) {
-	t.Parallel()
-	names := []string{"test", "flag", "sample"}
-	for i := 0; i < len(names); i++ {
-		n := NewFlag[string](names[i], "").SetShared()
-		v := n.Shared()
-		assert.True(t, v)
-	}
-}
-
-func TestGenericFlag_Required(t *testing.T) {
-	t.Parallel()
-	names := []string{"test", "flag", "sample"}
-	for i := 0; i < len(names); i++ {
-		n := NewFlag[string](names[i], "").SetRequired()
-		v := n.Required()
-		assert.True(t, v)
-	}
-}
-
-func TestGenericFlag_Parsed(t *testing.T) {
-	t.Parallel()
-	names := []string{"test", "flag", "sample"}
-	for i := 0; i < len(names); i++ {
-		n := NewFlag[string](names[i], "")
-		n.SetParsed()
-		v := n.Parsed()
-		assert.True(t, v)
-	}
-}
-
-func TestGenericFlag_Shorthand(t *testing.T) {
-	t.Parallel()
-	names := []string{"test", "flag", "sample"}
-	for i := 0; i < len(names); i++ {
-		n := NewFlag[string](names[i], "").WithShorthand(string(names[i][0]))
-		v := n.Shorthand()
-		assert.Equal(t, string(names[i][0]), v)
-	}
-}
-
-func TestGenericFlag_ParseString(t *testing.T) {
-	t.Parallel()
-	names := []string{"test", "flag", "sample"}
-	for i := 0; i < len(names); i++ {
-		n := NewFlag[string](names[i], "")
-		err := n.Parse(names[i])
-		assert.NoError(t, err)
-		v1 := n.Value().Value().(*string)
-		v2 := n.ValueOrDefault().Value().(*string)
-		assert.Equal(t, names[i], *v1)
-		assert.Equal(t, names[i], *v2)
-		assert.Equal(t, *v1, *v2)
-	}
-}
-
-func TestGenericFlag_ParseInt(t *testing.T) {
-	var expectedErr FlagError
-	t.Parallel()
-	names := []string{"test", "flag", "sample"}
-	for i := 0; i < len(names); i++ {
-		n := NewFlag[int](names[i], "")
-		err := n.Parse("10s")
-		assert.Error(t, err)
-		assert.True(t, errors.As(err, &expectedErr))
-		err = n.Parse(strconv.Itoa(i))
-		assert.NoError(t, err)
-		v1 := n.Value().Value().(*int)
-		v2 := n.ValueOrDefault().Value().(*int)
-		assert.Equal(t, i, *v1)
-		assert.Equal(t, i, *v2)
-		assert.Equal(t, *v1, *v2)
-	}
-}
-
-func TestGenericFlag_ParseBool(t *testing.T) {
-	var expectedErr FlagError
-	t.Parallel()
-	names := []string{"test", "flag", "sample"}
-	for i := 0; i < len(names); i++ {
-		n := NewFlag[bool](names[i], "")
-		err := n.Parse(names[i])
-		assert.Error(t, err)
-		assert.True(t, errors.As(err, &expectedErr))
-		assert.True(t, errors.Is(err, ParseBoolError()))
-		err = n.Parse("true")
-		assert.NoError(t, err)
-		v1 := n.Value().Value().(*bool)
-		v2 := n.ValueOrDefault().Value().(*bool)
-		assert.True(t, *v1)
-		assert.True(t, *v2)
-		assert.Equal(t, *v1, *v2)
-	}
-}
-
-func TestGenericFlag_ParseStringSlice(t *testing.T) {
-	t.Parallel()
-	names := []string{"test", "flag", "sample"}
-	for i := 0; i < len(names); i++ {
-		value := strings.Join(names, ",")
-		n := NewFlag[[]string](names[i], "")
-		err := n.Parse(value)
-		assert.NoError(t, err)
-		v1 := n.Value().Value().(*[]string)
-		v2 := n.ValueOrDefault().Value().(*[]string)
-		assert.True(t, reflect.DeepEqual(names, *v1))
-		assert.True(t, reflect.DeepEqual(names, *v2))
-		assert.True(t, reflect.DeepEqual(*v1, *v2))
-	}
-}
-
-func TestGenericFlag_ParseDuration(t *testing.T) {
-	var expectedErr FlagError
-	t.Parallel()
-	names := []string{"test", "flag", "sample"}
-	for i := 0; i < len(names); i++ {
-		n := NewFlag[time.Duration](names[i], "")
-		err := n.Parse("20")
-		assert.Error(t, err)
-		assert.True(t, errors.As(err, &expectedErr))
-		err = n.Parse("10s")
-		assert.NoError(t, err)
-		v1 := n.Value().Value().(*time.Duration)
-		v2 := n.ValueOrDefault().Value().(*time.Duration)
-		assert.Equal(t, time.Second*10, *v1)
-		assert.Equal(t, time.Second*10, *v2)
-		assert.Equal(t, *v1, *v2)
-	}
-}
-
-func BenchmarkNewFlag(b *testing.B) {
-	b.ResetTimer()
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = NewFlag[string]("test", "")
-	}
-}
-
-func BenchmarkGenericFlag_WithDefault(b *testing.B) {
-	b.ResetTimer()
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = NewFlag[string]("test", "").WithDefault("empty")
-	}
-}
-
-func BenchmarkGenericFlag_SetShared(b *testing.B) {
-	b.ResetTimer()
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = NewFlag[string]("test", "").SetShared()
-	}
-}
-
-func BenchmarkGenericFlag_SetRequired(b *testing.B) {
-	b.ResetTimer()
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		_ = NewFlag[string]("test", "").SetRequired()
-	}
-}
-
-func BenchmarkGenericFlag_SetParsed(b *testing.B) {
-	b.ResetTimer()
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		NewFlag[string]("test", "").SetParsed()
-	}
-}
-
-func BenchmarkGenericFlag_Parse(b *testing.B) {
-	b.ResetTimer()
-	b.ReportAllocs()
-	f := NewFlag[string]("test", "")
-	for i := 0; i < b.N; i++ {
-		_ = f.Parse("test")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.flag.Parse(tt.value)
+			assert.Error(t, err)
+		})
 	}
 }
