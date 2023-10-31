@@ -1,64 +1,57 @@
 package gocli
 
+import (
+	"errors"
+)
+
+type CommandsSet map[string]Command
+type FlagsSet map[string]Flag
+
 type Command struct {
 	Name        string
-	Subcommands map[string]Command
-	Run         func(Command)
-	RunE        func(Command) error
-	FlagSet     FlagSet
-	Config      Config
+	Description string
+	Flags       FlagsSet
+	Subcommands CommandsSet
+	Run         func(*Command)
+	RunE        func(*Command) error
 }
 
-func NewCommand(name string) Command {
-	return Command{
-		Name:    name,
-		FlagSet: NewFlagSet(),
+func NewCommand(name string, opts ...CommandOption) *Command {
+	cmd := &Command{
+		Name:        name,
+		Flags:       make(FlagsSet),
+		Subcommands: make(CommandsSet),
 	}
-}
-
-func (c Command) Flags() map[string]Flag {
-	return c.FlagSet.Flags
-}
-
-func (c Command) Flag(name string) Flag {
-	return c.FlagSet.Flag(name)
-}
-
-func (c Command) WithSubcommand(cmd Command) Command {
-	if c.Subcommands == nil {
-		c.Subcommands = make(map[string]Command)
+	for _, opt := range opts {
+		opt(cmd)
 	}
-	c.Subcommands[cmd.Name] = cmd
-	return c
+	return cmd
 }
 
-func (c Command) WithRunFunc(f func(Command)) Command {
-	c.Run = f
-	return c
-}
-
-func (c Command) WithRunEFunc(f func(Command) error) Command {
-	c.RunE = f
-	return c
-}
-
-func (c Command) WithFlag(flag Flag) Command {
-	c.FlagSet.AddFlag(flag)
-	return c
-}
-
-func (c Command) WithConfig(cfg Config) Command {
-	c.Config = cfg
-	return c
-}
-
-func (c Command) Execute() error {
-	if c.RunE != nil {
-		return c.RunE(c)
+func (c *Command) FlagByName(name string) Flag {
+	flag, ok := c.Flags[name]
+	if ok {
+		return flag
 	}
-	if c.Run != nil {
-		c.Run(c)
-		return nil
+	for _, item := range c.Flags {
+		if name == item.Shorthand() {
+			return item
+		}
 	}
-	return CommandExecuteError()
+	return flag
+}
+
+func FlagValue[T allowed](cmd *Command, flagName string) (*T, error) {
+	flag := cmd.FlagByName(flagName)
+	if flag == nil {
+		return nil, errors.New("flag not found")
+	}
+	if flag.IsNilValue() {
+		return nil, errors.New("flag value is not defined")
+	}
+	res, ok := flag.Value().(*T)
+	if ok {
+		return res, nil
+	}
+	return nil, errors.New("wrong type")
 }

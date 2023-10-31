@@ -1,61 +1,46 @@
 package gocli
 
 import (
-	"fmt"
+	"errors"
+	"os"
 	"path"
 	"strings"
 )
 
-func Run(rootCommand Command, args []string) error {
+func Run(command *Command) error {
 	var (
-		cmd Command
 		err error
+		cmd *Command
 	)
 
-	inheritFlags(&rootCommand)
-	cmd, err = evaluate(rootCommand, args)
+	args := os.Args
+	inheritFlags(command)
+	cmd, err = evaluate(command, args)
 	if err != nil {
 		return err
 	}
-	err = validateFlags(cmd.FlagSet)
+	err = validate(cmd)
 	if err != nil {
 		return err
 	}
-	return cmd.Execute()
+	return execute(cmd)
 }
 
 func inheritFlags(cmd *Command) {
 	for _, subcommand := range cmd.Subcommands {
-		for _, flag := range cmd.Flags() {
+		for _, flag := range cmd.Flags {
 			if flag.Shared() {
-				subcommand.WithFlag(flag)
+				subcommand.Flags[flag.Name()] = flag
 			}
 		}
 		inheritFlags(&subcommand)
 	}
 }
 
-func validateFlags(flags FlagSet) error {
-	for _, f := range flags.Flags {
-		if f.Parsed() {
-			continue
-		}
-		if f.Required() {
-			return NewFlagError(fmt.Sprintf(MissedRequiredFlagErrorMessage, f.Name()))
-		}
-		if f.ValueOrDefault().IsNil() {
-			return NewFlagError(fmt.Sprintf(MissedDefaultValueErrorMessage, f.Name()))
-		}
-	}
-	return nil
-}
-
-// evaluate function will parse the os.Args and compare args slice
-// with command passed as an argument
-func evaluate(cmd Command, args []string) (Command, error) {
+func evaluate(cmd *Command, args []string) (*Command, error) {
 	var (
-		err   error
 		value string
+		err   error
 	)
 
 	for i := 0; i < len(args); i++ {
@@ -66,33 +51,31 @@ func evaluate(cmd Command, args []string) (Command, error) {
 			if strings.Contains(arg, "=") {
 				arg, value = splitEqualsChar(arg)
 			}
-			flag := cmd.Flag(arg)
+			flag := cmd.FlagByName(arg)
 			if flag != nil {
-				switch flag.Value().Value().(type) {
+				switch flag.Value().(type) {
 				case *bool:
 					value = "true"
-					err = flag.Parse(value)
+					err = flag.parse(value)
 				default:
 					switch {
 					case value == "" && i == len(args)-1:
-						return Command{}, NewFlagError(fmt.Sprintf(MissedFlagValueErrorMessage, flag.Name()))
+						return nil, errors.New("error placeholder")
 					case value == "" && strings.HasPrefix(args[i+1], "-"):
-						return Command{}, NewFlagError(fmt.Sprintf(MissedFlagValueErrorMessage, flag.Name()))
+						return nil, errors.New("error placeholder")
 					case value == "":
 						value = args[i+1]
 						i++
 						fallthrough
 					default:
-						err = flag.Parse(value)
+						err = flag.parse(value)
 					}
 				}
 				if err != nil {
-					return Command{}, err
+					return nil, err
 				}
-				flag.SetParsed()
 				continue
 			}
-			return Command{}, NewCommandError(fmt.Sprintf(UndefinedFlagErrorMessage, arg, cmd.Name))
 		}
 		arg = sanitizeCommand(args[i])
 		if arg == cmd.Name {
@@ -100,16 +83,41 @@ func evaluate(cmd Command, args []string) (Command, error) {
 		}
 		command, ok := cmd.Subcommands[arg]
 		if ok {
-			cmd, err = evaluate(command, args[i:])
+			cmd, err = evaluate(&command, args[i:])
 			if err != nil {
-				return Command{}, err
+				return nil, err
 			}
 			return cmd, nil
 		} else {
-			return Command{}, NewCommandError(fmt.Sprintf(UndefinedCommandErrorMessage, arg))
+			return nil, errors.New("error placeholder")
 		}
 	}
 	return cmd, nil
+}
+
+func validate(cmd *Command) error {
+	for _, flag := range cmd.Flags {
+		requiredNotParsed := flag.Required() && !flag.Parsed()
+		optionalNoValue := !flag.Required() && flag.IsNilValue()
+		if requiredNotParsed {
+			return errors.New("required but not set")
+		}
+		if optionalNoValue {
+			return errors.New("optional but no value")
+		}
+	}
+	return nil
+}
+
+func execute(cmd *Command) error {
+	if cmd.RunE != nil {
+		return cmd.RunE(cmd)
+	}
+	if cmd.Run != nil {
+		cmd.Run(cmd)
+		return nil
+	}
+	return errors.New("no run func error placeholder")
 }
 
 func splitEqualsChar(in string) (string, string) {
@@ -117,8 +125,8 @@ func splitEqualsChar(in string) (string, string) {
 	return split[0], split[1]
 }
 
-func sanitizeCommand(input string) string {
-	cleaned := path.Clean(input)
+func sanitizeCommand(in string) string {
+	cleaned := path.Clean(in)
 	file := path.Base(cleaned)
 	return file
 }
