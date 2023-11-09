@@ -8,9 +8,10 @@ Minimalistic library to build simple CLI application with support of:
 - Flag types:
   1. string
   2. int
-  3. bool
-  4. []string
-  5. time.Duration
+  3. float64
+  4. bool
+  5. []string
+  6. time.Duration
 - Shorthands for flags 
 
 ### Usage
