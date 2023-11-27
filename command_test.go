@@ -55,8 +55,11 @@ func TestNewCommand(t *testing.T) {
 		}, {
 			"complex command",
 			&Command{
-				Name:  "sample",
-				Flags: FlagsSet{"parent": &genericFlag[bool]{name: "parent"}},
+				Name: "sample",
+				Flags: FlagsSet{"parent": &genericFlag[bool]{name: "parent", defVal: struct {
+					defined bool
+					val     *bool
+				}{defined: true, val: new(bool)}}},
 				Subcommands: CommandsSet{
 					"sub": {
 						Name:        "sub",
