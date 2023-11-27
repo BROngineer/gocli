@@ -10,6 +10,7 @@ import (
 type CommandComparisonAssertion func(*testing.T, *Command, *Command)
 
 func CompareCommands(t *testing.T, expected, actual *Command) {
+	t.Helper()
 	assert.Equal(t, expected.Name, actual.Name)
 	assert.Equal(t, expected.Description, actual.Description)
 	assert.True(t, reflect.DeepEqual(expected.Flags, actual.Flags))
@@ -87,8 +88,10 @@ func TestNewCommand(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			CompareCommands(t, tt.expected, tt.actual)
+		testCase := tt
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			testCase.assertion(t, testCase.expected, testCase.actual)
 		})
 	}
 }

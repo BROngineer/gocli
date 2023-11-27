@@ -115,34 +115,34 @@ func (f *genericFlag[T]) parse(input string) error {
 	var v T
 	switch f.val.unwrap().(type) {
 	case *string:
-		v = any(input).(T)
+		v, _ = any(input).(T)
 	case *int:
 		d, err := strconv.Atoi(input)
 		if err != nil {
 			return err
 		}
-		v = any(d).(T)
+		v, _ = any(d).(T)
 	case *float64:
 		d, err := strconv.ParseFloat(input, 64)
 		if err != nil {
 			return err
 		}
-		v = any(d).(T)
+		v, _ = any(d).(T)
 	case *bool:
 		d, err := strconv.ParseBool(input)
 		if err != nil {
 			return err
 		}
-		v = any(d).(T)
+		v, _ = any(d).(T)
 	case *[]string:
 		d := strings.Split(input, ",")
-		v = any(d).(T)
+		v, _ = any(d).(T)
 	case *time.Duration:
 		d, err := time.ParseDuration(input)
 		if err != nil {
 			return err
 		}
-		v = any(d).(T)
+		v, _ = any(d).(T)
 	}
 	f.val = Value[T]{defined: true, val: &v}
 	f.parsed = true
@@ -161,7 +161,7 @@ func (f *genericFlag[T]) Value() any {
 }
 
 func (f *genericFlag[T]) setDefVal(value flagValue) {
-	f.defVal = value.(Value[T])
+	f.defVal, _ = value.(Value[T])
 }
 
 func (f *genericFlag[T]) IsNilValue() bool {

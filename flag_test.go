@@ -13,6 +13,7 @@ type FlagComparisonAssertion func(*testing.T, Flag, Flag)
 type FlagValueAssertion func(*testing.T, any, any)
 
 func CompareFlags(t *testing.T, expect, actual Flag) {
+	t.Helper()
 	assert.Equal(t, expect.Name(), actual.Name())
 	assert.Equal(t, expect.Description(), actual.Description())
 	assert.Equal(t, expect.Shorthand(), actual.Shorthand())
@@ -24,7 +25,8 @@ func CompareFlags(t *testing.T, expect, actual Flag) {
 }
 
 func AssertFlagValue[T allowed](t *testing.T, expect, actual any) {
-	actualTyped := actual.(*T)
+	t.Helper()
+	actualTyped, _ := actual.(*T)
 	assert.Equal(t, reflect.TypeOf(expect), reflect.TypeOf(*actualTyped))
 	assert.Equal(t, expect, *actualTyped)
 }
@@ -91,8 +93,10 @@ func TestNewFlag(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		testCase := tt
 		t.Run(tt.name, func(t *testing.T) {
-			tt.assertion(t, tt.expected, tt.actual)
+			t.Parallel()
+			testCase.assertion(t, testCase.expected, testCase.actual)
 		})
 	}
 }
@@ -145,12 +149,14 @@ func TestParseFlag(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := tt.flag.parse(tt.value)
+		testCase := tt
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			err := testCase.flag.parse(testCase.value)
 			assert.NoError(t, err)
 			assert.True(t, true, flag.Parsed())
-			actual := tt.flag.Value()
-			tt.assertion(t, tt.expected, actual)
+			actual := testCase.flag.Value()
+			testCase.assertion(t, testCase.expected, actual)
 		})
 	}
 }
@@ -181,8 +187,10 @@ func TestParseFlagErr(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := tt.flag.parse(tt.value)
+		testCase := tt
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			err := testCase.flag.parse(testCase.value)
 			assert.Error(t, err)
 		})
 	}
